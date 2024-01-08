@@ -1,19 +1,27 @@
 conda activate md-davis
-
+work_root=$PWD
+##########################################################
+### update variables here ################################
+##########################################################
 # 1.data file
 
-gro_file='example/md_protein.gro'
-traj_file='example/md_protein.xtc'
-#
+data_dir='/Users/muwang/Documents/github/free_energy/Mu_free_energy_landscape/test/example'
+gro_file="$data_dir/md_protein.gro"
+traj_file="$data_dir/md_protein.xtc"
+out_dir="$work_root/calcucate_FEL_out"
 
 # 2.processing
-
 input_top=$gro_file
 input_traj=$traj_file
 temperature=300
 tu='ps'
-
 j_name='2dn2 enhance sampling'
+##########################################################
+### update variables here ### END
+##########################################################
+out_dir_PCA="$out_dir/FEL_PCA"
+out_dir_RMSD_RG="$out_dir/FEL_RMSD_RG"
+
 rmds_file='rmsd_1.xvg'
 rmds_out_plot='rmsd_1.html'
 gyrate_file='gyrate_1.xvg'
@@ -30,7 +38,12 @@ gibbs_eps='gibbs_PCA.eps'
 FES_xpm_rmsd_rg='FES_rmsd_rg.xpm'
 gibbs_eps_rmsd_rg='gibbs_rmsd_rg.eps'
 
+# initialize out directory
+mkdir -p $out_dir_PCA
+mkdir -p $out_dir_RMSD_RG
 
+# FEL RMSD_RG
+cd $out_dir_RMSD_RG
 
 # make rmsd and gyrate file by C-alpha
 echo 3 3 | gmx rms -f $input_traj -s $input_top -o $rmds_file -tu $tu
@@ -56,10 +69,10 @@ gmx sham -f $rmsd_rg_file -ls $FES_xpm_rmsd_rg -tsham $temperature -nlevels 50 -
 awk '{gsub(/PC1/,"RMSD(C-alpha)"); gsub(/PC2/,"Radius of Gyration(C-alpha)"); print}' $FES_xpm_rmsd_rg > temp && mv temp $FES_xpm_rmsd_rg
 gmx xpm2ps -f $FES_xpm_rmsd_rg -o $gibbs_eps_rmsd_rg -rainbow red
 
+# FEL RMSD_RG # END
 
-
-# landscape by PCA
-
+# FEL PCA
+cd $out_dir_PCA
 #Calculate covariance matrix and calculate the eigenvectors and eigenvalues. default calculated by C-alpha
 echo 3 3 | gmx covar -f $input_traj -s $input_top -o eigenvalues.xvg -v eigenvectors.trr -xpma covapic.xpm
 #Calculate PC1 and PC2
@@ -76,11 +89,13 @@ md-davis landscape_xvg -c -T $temperature -x $pc1_file -y $pc2_file -n $j_name -
 echo "Done!"
 
 conda deactivate
+cd $work_root
 
 echo "##################################################"
 echo "Done!"
-echo "3d Gibbs Free Energy landscape by RMSD and Rg: $landscape_RMSD_out"
-echo "3d Gibbs Free Energy landscape by PCA: $landscape_PCA_out"
-echo "2d Gibbs Free Energy landscape by RMSD and Rg: $gibbs_eps_rmsd_rg"
-echo "2d Gibbs Free Energy landscape by PCA: $gibbs_eps"
+echo "3d Gibbs Free Energy landscape by RMSD and Rg:\n> $out_dir_RMSD_RG/$landscape_RMSD_out"
+echo "3d Gibbs Free Energy landscape by PCA:\n> $out_dir_PCA/$landscape_PCA_out"
+echo "2d Gibbs Free Energy landscape by RMSD and Rg:\n> $out_dir_RMSD_RG/$gibbs_eps_rmsd_rg"
+echo "2d Gibbs Free Energy landscape by PCA:\n> $out_dir_PCA/$gibbs_eps"
+echo "outputs in directory:\n> $out_dir"
 echo "##################################################"
